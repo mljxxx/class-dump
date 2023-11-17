@@ -398,17 +398,34 @@
         
         struct cd_objc2_list_header listHeader;
         
-        // See getEntsize() from http://www.opensource.apple.com/source/objc4/objc4-532.2/runtime/objc-runtime-new.h
-        listHeader.entsize = [cursor readInt32] & ~(uint32_t)3;
+        // See getEntsize() from https://github.com/apple-oss-distributions/objc4/blob/main/runtime/objc-runtime-new.h
+        uint32_t entsizeAndFlags = [cursor readInt32];
+        uint32_t flagMask = 0xffff0003;
+        uint32_t flags = entsizeAndFlags & flagMask;
+        bool isSmall = !!(flags & 0x80000000);
+        listHeader.entsize = entsizeAndFlags & ~flagMask;
+        if(isSmall) {
+            [cursor setPtrSize:listHeader.entsize / 3];
+        } else {
+            NSParameterAssert(listHeader.entsize == 3 * [self.machOFile ptrSize]);
+        }
+        
         listHeader.count   = [cursor readInt32];
-        NSParameterAssert(listHeader.entsize == 3 * [self.machOFile ptrSize]);
         
         for (uint32_t index = 0; index < listHeader.count; index++) {
             struct cd_objc2_method objc2Method;
             
-            objc2Method.name  = [cursor readPtr];
-            objc2Method.types = [cursor readPtr];
-            objc2Method.imp   = [cursor readPtr];
+            if(isSmall) {
+                objc2Method.name  = [[self class] getRelativePointerWithBase:[cursor readOffset] offset:[cursor readPtr]];
+                objc2Method.types = [[self class] getRelativePointerWithBase:[cursor readOffset] offset:[cursor readPtr]];
+                objc2Method.imp   = [[self class] getRelativePointerWithBase:[cursor readOffset] offset:[cursor readPtr]];
+                CDMachOFileDataCursor *nameCursor = [[CDMachOFileDataCursor alloc] initWithFile:self.machOFile address:objc2Method.name];
+                objc2Method.name = [nameCursor readPtr];
+            } else {
+                objc2Method.name  = [cursor readPtr];
+                objc2Method.types = [cursor readPtr];
+                objc2Method.imp   = [cursor readPtr];
+            }
             NSString *name    = [self.machOFile stringAtAddress:objc2Method.name];
             NSString *types   = [self.machOFile stringAtAddress:objc2Method.types];
             
@@ -495,6 +512,16 @@
 - (CDSection *)objcImageInfoSection;
 {
     return [[self.machOFile dataConstSegment] sectionWithName:@"__objc_imageinfo"];
+}
+
++ (uint64_t)getRelativePointerWithBase:(uint32_t)base offset:(int32_t)offset {
+    if (offset == 0) {
+        return (uint64_t)NULL;
+    } else {
+        uint32_t signExtendedOffset = (uint32)(int32_t)offset;
+        uint32_t pointer = base + signExtendedOffset;
+        return (uint64_t)pointer;
+    }
 }
 
 @end

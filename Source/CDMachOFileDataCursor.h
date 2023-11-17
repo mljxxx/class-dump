@@ -18,6 +18,7 @@
 @property (nonatomic, weak, readonly) CDMachOFile *machOFile;
 
 - (void)setAddress:(NSUInteger)address;
+- (void)setPtrSize:(NSUInteger)ptrSize;
 
 // Read using the current byteOrder
 - (uint16_t)readInt16;

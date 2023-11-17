@@ -65,6 +65,10 @@
     [self setOffset:dataOffset];
 }
 
+- (void)setPtrSize:(NSUInteger)ptrSize {
+    _ptrSize = ptrSize;
+}
+
 #pragma mark - Read using the current byteOrder
 
 - (uint16_t)readInt16;

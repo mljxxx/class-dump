@@ -53,6 +53,10 @@
 
 #pragma mark -
 
+-(NSUInteger)readOffset {
+    return _offset;
+}
+
 - (uint8_t)readByte;
 {
     uint8_t result;

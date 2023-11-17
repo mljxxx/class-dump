@@ -14,7 +14,7 @@
 
 - (void)advanceByLength:(NSUInteger)length;
 - (NSUInteger)remaining;
-
+- (NSUInteger)readOffset;
 - (uint8_t)readByte;
 
 - (uint16_t)readLittleInt16;
